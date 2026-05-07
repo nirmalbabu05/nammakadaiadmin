@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Namma Kadai | Smart POS System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <style>
+        :root { --bg: #f0f2f5; --dark: #111; --orange: #FF4A00; --card: #fff; --green: #28a745; --blue: #007bff;}
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background: var(--bg); color: var(--dark); height: 100vh; overflow: hidden; display: flex; flex-direction: column;}
+        
+        /* Header */
+        header { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 10; }
+        .brand { font-size: 1.8rem; font-weight: 800; color: var(--orange); }
+        .user-info { font-weight: 600; color: #666; display: flex; align-items: center; gap: 10px;}
+
+        /* Main Layout */
+        .pos-container { flex: 1; display: flex; overflow: hidden; }
+        
+        /* Left: Menu & Cart */
+        .pos-left { flex: 1.5; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #ddd; }
+        .menu-area { flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa;}
+        .cat-title { font-size: 1.2rem; font-weight: 800; margin: 15px 0 10px 0; color: #333; text-transform: uppercase; letter-spacing: 1px;}
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .menu-item-btn { 
+            background: #fff; border: 2px solid #eee; border-radius: 10px; padding: 15px 10px; 
+            text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 5px;
+        }
+        .menu-item-btn:hover { border-color: var(--orange); box-shadow: 0 5px 15px rgba(255,74,0,0.1); transform: translateY(-3px);}
+        .menu-item-btn .name { font-weight: 700; font-size: 0.95rem; line-height: 1.2;}
+        .menu-item-btn .price { color: var(--orange); font-weight: 800; }
+
+        .cart-area { flex: 0 0 350px; background: #fff; display: flex; flex-direction: column; border-top: 2px solid #eee; }
+        .cart-header { padding: 15px 20px; background: #111; color: #fff; font-weight: 800; font-size: 1.2rem; display: flex; justify-content: space-between;}
+        .cart-list { flex: 1; overflow-y: auto; padding: 10px 20px; }
+        .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #ddd; }
+        .cart-row-name { font-weight: 600; font-size: 1.05rem; flex: 1;}
+        .cart-row-price { font-weight: 800; color: #333; }
+        .cart-row-remove { color: #dc3545; background: none; border: none; cursor: pointer; font-size: 1.1rem; margin-left: 15px;}
+        
+        .cart-footer { padding: 20px; background: #fafafa; border-top: 1px solid #ddd; }
+        
+        /* 🟢 CUSTOM NAME INPUT STYLE 🟢 */
+        .name-input-group { margin-bottom: 15px; }
+        .name-input-group input { 
+            width: 100%; padding: 12px 15px; border-radius: 8px; border: 2px solid #eee; 
+            font-size: 1rem; font-weight: 600; outline: none; transition: 0.3s;
+        }
+        .name-input-group input:focus { border-color: var(--orange); background: #fff; }
+
+        .total-display { display: flex; justify-content: space-between; font-size: 1.5rem; font-weight: 800; margin-bottom: 15px; }
+        .punch-btn { width: 100%; padding: 15px; background: var(--green); color: #fff; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: 800; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;}
+        .punch-btn:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(40,167,69,0.3);}
+
+        /* Right: Active Orders */
+        .pos-right { flex: 1; display: flex; flex-direction: column; background: #f0f2f5; padding: 20px;}
+        .section-header { font-size: 1.4rem; font-weight: 800; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
+        
+        .orders-container { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 10px;}
+        
+        .order-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-left: 5px solid #ccc; margin-bottom: 15px; animation: fadeIn 0.3s ease;}
+        @keyframes fadeIn { from {opacity: 0; transform: translateY(10px);} to {opacity: 1; transform: translateY(0);} }
+        
+        .order-card.prep { border-left-color: #FFC107; }
+        .order-card.ready { border-left-color: var(--green); background: #f8fff9;}
+
+        .o-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .o-id { font-size: 1.8rem; font-weight: 900; color: var(--dark); }
+        .o-time { color: #888; font-size: 0.9rem; font-weight: 600;}
+        
+        /* 🟢 DISPLAY NAME ON CARD 🟢 */
+        .o-customer { font-weight: 800; color: var(--orange); margin-bottom: 10px; font-size: 1.1rem; text-transform: capitalize; }
+        
+        .o-items { font-size: 1rem; color: #555; line-height: 1.5; margin-bottom: 15px; font-weight: 600;}
+        
+        .o-action-btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: 0.2s; text-transform: uppercase;}
+        .btn-mark-ready { background: var(--blue); color: #fff; }
+        .btn-mark-ready:hover { background: #0056b3; }
+        .btn-mark-collected { background: var(--green); color: #fff; }
+        .btn-mark-collected:hover { background: #218838; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">NAMMA KADAI <span style="color:#aaa; font-weight:400;">| POS Terminal</span></div>
+        <div class="user-info"><i class="fas fa-user-circle" style="font-size:1.5rem;"></i> Staff Dashboard</div>
+    </header>
+    
+
+    <div class="pos-container">
+        <div class="pos-left">
+            <div class="menu-area" id="menu-area">
+                <h3 style="text-align:center; color:#999; margin-top:50px;">Loading Menu...</h3>
+            </div>
+            
+            <div class="cart-area">
+                <div class="cart-header">
+                    <span>Current Order</span>
+                    <button style="background:none; border:none; color:#ff4a4a; cursor:pointer; font-weight:700;" onclick="clearCart()">Clear</button>
+                </div>
+                <div class="cart-list" id="cart-list">
+                </div>
+                <div class="cart-footer">
+                    <div class="name-input-group">
+                        <input type="text" id="cust-name" placeholder="Customer Name (Optional)">
+                    </div>
+                    <div class="total-display"><span>Total:</span> <span id="cart-total">₹0</span></div>
+                    <button class="punch-btn" onclick="punchOrder()"><i class="fas fa-bell"></i> Send to Kitchen</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="pos-right">
+            <div class="section-header">Live Kitchen Queue <span id="queue-count" style="background:#111; color:#fff; padding:5px 15px; border-radius:50px; font-size:1rem;">0 Orders</span></div>
+            <div class="orders-container" id="orders-container">
+            </div>
+        </div>
+    </div>
+    
+
+    <script>
+        // 🔴 FIREBASE CONFIG 🔴
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyKRrmg_IOwWz3HA5OC5i3B6SuQjRIJzA",
+            authDomain: "nammakadai-b34ba.firebaseapp.com",
+            databaseURL: "https://nammakadai-b34ba-default-rtdb.firebaseio.com",
+            projectId: "nammakadai-b34ba",
+            storageBucket: "nammakadai-b34ba.firebasestorage.app",
+            messagingSenderId: "489470177133",
+            appId: "1:489470177133:web:3af68651e4ec5d6a0a7464"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- 1. LOAD MENU FOR POS ---
+        db.ref('menu').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(!data) return;
+            const menuArea = document.getElementById('menu-area');
+            let html = '';
+
+            for(let catKey in data) {
+                const cat = data[catKey];
+                html += `<div class="cat-title">${cat.categoryName}</div><div class="menu-grid">`;
+                
+                if(cat.items) {
+                    for(let itemKey in cat.items) {
+                        const item = cat.items[itemKey];
+                        if(item.available !== false) {
+                            html += `
+                                <button class="menu-item-btn" onclick="addToCart('${item.name.replace(/'/g, "\\'")}', ${item.price})">
+                                    <span class="name">${item.name}</span>
+                                    <span class="price">₹${item.price}</span>
+                                </button>
+                            `;
+                        }
+                    }
+                }
+                html += `</div>`;
+            }
+            menuArea.innerHTML = html;
+        });
+
+        // --- 2. POS CART LOGIC ---
+        let posCart = [];
+
+        window.addToCart = function(name, price) {
+            posCart.push({name, price});
+            renderCart();
+        }
+
+        window.removeFromCart = function(index) {
+            posCart.splice(index, 1);
+            renderCart();
+        }
+
+        window.clearCart = function() {
+            posCart = [];
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cart-list');
+            let html = '';
+            let total = 0;
+
+            if(posCart.length === 0) {
+                list.innerHTML = `<p style="text-align:center; color:#ccc; margin-top:20px;">No items selected.</p>`;
+                document.getElementById('cart-total').innerText = `₹0`;
+                return;
+            }
+
+            posCart.forEach((item, index) => {
+                total += item.price;
+                html += `
+                    <div class="cart-row">
+                        <span class="cart-row-name">${item.name}</span>
+                        <div>
+                            <span class="cart-row-price">₹${item.price}</span>
+                            <button class="cart-row-remove" onclick="removeFromCart(${index})"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+            document.getElementById('cart-total').innerText = `₹${total}`;
+        }
+
+        // --- 3. PUNCH ORDER TO FIREBASE ---
+        window.punchOrder = function() {
+            if(posCart.length === 0) return alert("Add items to cart first!");
+
+            // 🟢 GET CUSTOMER NAME 🟢
+            const nameInput = document.getElementById('cust-name');
+            const customerName = nameInput.value.trim() || "Guest";
+
+            const orderId = Math.floor(100 + Math.random() * 900);
+            let itemSummary = posCart.map(i => i.name).join(", ");
+            let totalAmt = posCart.reduce((sum, i) => sum + i.price, 0);
+            let timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            const newOrder = {
+                orderId: orderId,
+                customerName: customerName, // 🟢 SAVED IN DB 🟢
+                itemsStr: itemSummary,
+                total: totalAmt,
+                status: "preparing",
+                time: timeStr,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            db.ref('orders').push(newOrder).then(() => {
+                clearCart();
+                nameInput.value = ''; // 🟢 CLEAR NAME INPUT 🟢
+                alert(`Order #${orderId} Sent to Kitchen!`);
+            });
+        }
+
+        // --- 4. LIVE ORDER MANAGEMENT (RIGHT PANEL) ---
+        db.ref('orders').on('value', (snapshot) => {
+            const data = snapshot.val();
+            const container = document.getElementById('orders-container');
+            container.innerHTML = '';
+            
+            if(!data) {
+                document.getElementById('queue-count').innerText = "0 Orders";
+                return;
+            }
+
+            let orderCount = 0;
+            let prepHtml = '';
+            let readyHtml = '';
+
+            for(let key in data) {
+                const order = data[key];
+                orderCount++;
+
+                if(order.status === "preparing") {
+                    prepHtml += `
+                        <div class="order-card prep">
+                            <div class="o-header">
+                                <span class="o-id">#${order.orderId}</span>
+                                <span class="o-time">${order.time} | ₹${order.total}</span>
+                            </div>
+                            <div class="o-customer"><i class="fas fa-user"></i> ${order.customerName}</div>
+                            <div class="o-items">${order.itemsStr}</div>
+                            <button class="o-action-btn btn-mark-ready" onclick="updateOrderStatus('${key}', 'ready')">
+                                <i class="fas fa-check"></i> Mark as Ready
+                            </button>
+                        </div>
+                    `;
+                } else if (order.status === "ready") {
+                    readyHtml += `
+                        <div class="order-card ready">
+                            <div class="o-header">
+                                <span class="o-id">#${order.orderId}</span>
+                                <span class="o-time" style="color:var(--green)">READY</span>
+                            </div>
+                            <div class="o-customer"><i class="fas fa-user"></i> ${order.customerName}</div>
+                            <div class="o-items">${order.itemsStr}</div>
+                            <button class="o-action-btn btn-mark-collected" onclick="archiveOrder('${key}')">
+                                <i class="fas fa-hands"></i> Order Collected
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+
+            container.innerHTML = prepHtml + readyHtml;
+            document.getElementById('queue-count').innerText = `${orderCount} Orders`;
+        });
+
+        window.updateOrderStatus = function(orderKey, newStatus) {
+            db.ref(`orders/${orderKey}`).update({ status: newStatus });
+        }
+
+        window.archiveOrder = function(orderKey) {
+            db.ref(`orders/${orderKey}`).remove();
+        }
+        
+    </script>
+</body>
+</html>
