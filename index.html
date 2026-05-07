@@ -248,26 +248,15 @@
         window.deleteItem = function(catKey, itemKey) { if(confirm("Delete this item?")) db.ref(`menu/${catKey}/items/${itemKey}`).remove(); }
         
         window.addNewItem = function() {
-    const cat = document.getElementById('new-cat').value;
-    const name = document.getElementById('new-name').value;
-    const price = document.getElementById('new-price').value;
-    
-    // 🟢 Dynamic Image based on Name Keyword 🟢
-    const img = `https://loremflickr.com/400/400/${encodeURIComponent(name)}`;
-    
-    if(!name || !price) return alert("Enter name and price!");
-    
-    db.ref(`menu/${cat}/items`).push({ 
-        name: name, 
-        price: parseInt(price), 
-        img: img, 
-        available: true 
-    }).then(() => {
-        alert("Item Added with Auto Image!"); 
-        document.getElementById('new-name').value = ''; 
-        document.getElementById('new-price').value = '';
-    });
-}
+            const cat = document.getElementById('new-cat').value;
+            const name = document.getElementById('new-name').value;
+            const price = document.getElementById('new-price').value;
+            const img = document.getElementById('new-img').value || `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80`;
+            if(!name || !price) return alert("Enter name and price!");
+            db.ref(`menu/${cat}/items`).push({ name: name, price: parseInt(price), img: img, available: true }).then(() => {
+                alert("Item Added!"); document.getElementById('new-name').value = ''; document.getElementById('new-price').value = ''; document.getElementById('new-img').value = '';
+            });
+        }
 
         window.openEditModal = function(catKey, itemKey) {
             const item = globalMenuData[catKey].items[itemKey];
@@ -282,24 +271,14 @@
         window.closeEditModal = function() { document.getElementById('modal-overlay').classList.remove('active'); document.getElementById('edit-modal').classList.remove('active'); }
         
         window.saveEdit = function() {
-    const catKey = document.getElementById('edit-cat-key').value;
-    const itemKey = document.getElementById('edit-item-key').value;
-    const newName = document.getElementById('edit-name').value;
-    const newPrice = document.getElementById('edit-price').value;
-    
-    // 🟢 Update Image based on New Name 🟢
-    const newImg = `https://loremflickr.com/400/400/${encodeURIComponent(newName)}`;
-    
-    if(!newName || !newPrice) return alert("Name and Price cannot be empty!");
-    
-    db.ref(`menu/${catKey}/items/${itemKey}`).update({ 
-        name: newName, 
-        price: parseInt(newPrice), 
-        img: newImg 
-    }).then(() => { 
-        closeEditModal(); 
-    }).catch(err => alert("Error: " + err.message));
-}
+            const catKey = document.getElementById('edit-cat-key').value;
+            const itemKey = document.getElementById('edit-item-key').value;
+            const newName = document.getElementById('edit-name').value;
+            const newPrice = document.getElementById('edit-price').value;
+            const newImg = document.getElementById('edit-img').value;
+            if(!newName || !newPrice) return alert("Name and Price cannot be empty!");
+            db.ref(`menu/${catKey}/items/${itemKey}`).update({ name: newName, price: parseInt(newPrice), img: newImg }).then(() => { closeEditModal(); }).catch(err => alert("Error: " + err.message));
+        }
 
         // 🟢 YOUTUBE VIDEO CONTROLLER LOGIC 🟢
         window.setLiveVideo = function() {
